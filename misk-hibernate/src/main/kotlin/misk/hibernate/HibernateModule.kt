@@ -10,6 +10,7 @@ import misk.inject.toKey
 import misk.jdbc.DataSourceConfig
 import misk.jdbc.DataSourceDecorator
 import misk.jdbc.DataSourceService
+import misk.jdbc.DataSourceType
 import misk.jdbc.PingDatabaseService
 import misk.resources.ResourceLoader
 import misk.vitess.StartVitessService
@@ -159,13 +160,15 @@ class HibernateModule(
   }
 
   private fun maybeBindStartVitessService() {
+    if (config.type != DataSourceType.VITESS) return
+
     val environment = Environment.fromEnvironmentVariable()
-    if (environment == Environment.DEVELOPMENT || environment == Environment.TESTING) {
-      val startVitessServiceKey = StartVitessService::class.toKey(qualifier)
-      multibind<Service>().to(startVitessServiceKey)
-      bind(startVitessServiceKey).toProvider(Provider<StartVitessService> {
-        StartVitessService(environment = environment, config = config, qualifier = qualifier)
-      }).asSingleton()
-    }
+    if (environment !in setOf(Environment.DEVELOPMENT, Environment.TESTING)) return
+
+    val startVitessServiceKey = StartVitessService::class.toKey(qualifier)
+    multibind<Service>().to(startVitessServiceKey)
+    bind(startVitessServiceKey).toProvider(Provider<StartVitessService> {
+      StartVitessService(environment = environment, config = config, qualifier = qualifier)
+    }).asSingleton()
   }
 }
